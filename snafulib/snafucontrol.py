@@ -1,6 +1,7 @@
 # Snafu: Snake Functions - Control Plane Module
 
 import flask
+import zipfile
 import json
 import argparse
 import os
@@ -188,7 +189,6 @@ class SnafuControl:
 	port = None
 	snafu = None
 	authenticatormods = []
-	passive = False
 
 	def __init__(self):
 		pass
@@ -252,8 +252,6 @@ class SnafuControl:
 	@app.route("/api/v1/namespaces/<namespace>/actions/<function>", methods=["POST"])
 	# ?blocking=true&result=true
 	def invokeopenwhisk(namespace, function):
-		if SnafuControl.passive:
-			return ControlUtil.notauthorised()
 		data = flask.request.data.decode("utf-8")
 		dataargs = json.loads(data)
 		#print("F", function, dataargs)
@@ -276,8 +274,6 @@ class SnafuControl:
 
 	@app.route("/v1beta2/projects/<project>/locations/<location>/functions/<function>", methods=["POST"])
 	def invokegoogle(project, location, function):
-		if SnafuControl.passive:
-			return ControlUtil.notauthorised()
 		function = function.split(":")[0]
 		response = SnafuControl.snafu.execute(function)
 		return json.dumps(response)
@@ -286,20 +282,20 @@ class SnafuControl:
 	def functiondownload(function):
 		func, config, sourceinfos = SnafuControl.snafu.functions[function]
 		try:
-			path = sourceinfos.source
-			mode = "r"
-			dirname = os.path.dirname(sourceinfos.source)
-			pdirname = os.path.dirname(os.path.abspath(os.path.join(sourceinfos.source, "..")))
-			zippath = os.path.join(pdirname, os.path.basename(dirname) + ".zip")
-			if os.path.isfile(zippath):
-				path = zippath
-				mode = "rb"
-
-			content = open(path, mode).read()
-		except:
-			err = json.dumps({"errorMessage": "NoZipFilePresent"})
+			ls = [".py",".json",".js",".c",".so",".java",".class"]
+			function_file = str(sourceinfos.source)
+			path = str(os.getcwd()) + "/" + function_file
+			for i in ls: 
+				function_file = function_file.replace(i,"")
+			pathZip = str(os.getcwd()) + "/" + function_file + " .zip"
+			funZip = zipfile.ZipFile(pathZip,'w')
+			funZip.write(path,os.path.basename(path),compress_type=zipfile.ZIP_DEFLATED)
+			funZip.close() 
+		except Exception as e:
+			err = json.dumps({"errorMessage": "NoZipFilePresent " + str(os.getcwd()) + "/" + str(sourceinfos.source)})
+			print(str(e))
 			return err, 501
-		return flask.Response(content, mimetype="application/octet-stream")
+		return flask.send_file(pathZip, mimetype="application/zip",as_attachment=True)
 
 	@app.route("/2015-03-31/functions", methods=["POST"])
 	def createfunction():
@@ -419,8 +415,6 @@ class SnafuControl:
 		auth = SnafuControl.authorise()
 		if not auth:
 			return ControlUtil.notauthorised()
-		if SnafuControl.passive:
-			return ControlUtil.notauthorised()
 
 		if function in SnafuControl.snafu.functions:
 			if flask.request.method == "GET":
@@ -442,8 +436,6 @@ class SnafuControl:
 		auth = SnafuControl.authorise()
 		if not auth:
 			return ControlUtil.notauthorised()
-		if SnafuControl.passive:
-			return ControlUtil.notauthorised()
 
 		data = flask.request.data.decode("utf-8")
 		"""
@@ -458,10 +450,8 @@ class SnafuControl:
 		auth = SnafuControl.authorise()
 		if not auth:
 			return ControlUtil.notauthorised()
-		if SnafuControl.passive:
-			return ControlUtil.notauthorised()
 
-		if SnafuControl.snafu.executormods[0].__name__ == "snafulib.executors.docker":
+		if SnafuControl.snafu.executormods[0].__name__ == "executors.docker":
 			response = SnafuControl.snafu.executormods[0].executecontrol(flask.request, auth[1])
 		else:
 			dataargs = {}
@@ -517,7 +507,6 @@ class SnafuControl:
 		parser.add_argument("-p", "--port", help="HTTP port number", type=int, default=10000)
 		parser.add_argument("-r", "--reaper", help="closed connection reaper", action="store_true")
 		parser.add_argument("-d", "--deployer", help="automated hot deployment", action="store_true")
-		parser.add_argument("-P", "--passive", help="passive mode without function execution", action="store_true")
 
 		for action in parser._actions:
 			if action.dest == "executor":
@@ -536,11 +525,7 @@ class SnafuControl:
 
 		SnafuControl.snafu = snafulib.snafu.Snafu(args.quiet)
 		SnafuControl.port = args.port
-		SnafuControl.passive = args.passive
 		# FIXME: should now provide the choice between lambda, gfunctions and openwhisk depending on modular activation
-
-		self.snafu.configpath = args.settings
-		self.snafu.setupparsers(snafulib.snafu.selectparsers(args.function_parser))
 		self.snafu.activate(args.file, "lambda", ignore=ignore)
 		self.snafu.setuploggers(args.logger)
 		self.snafu.setupexecutors(snafulib.snafu.selectexecutors(args.executor))
@@ -558,17 +543,7 @@ class SnafuControl:
 			print("+ deployer")
 			ControlUtil.deployer(SnafuControl.snafu)
 
-		context = None
-		if args.port == 443 or args.port == 10443:
-			print("+ tls activation")
-			#import flask_sslify
-			#sslify = flask_sslify.SSLify(self.app)
-			import ssl
-			context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-			context.load_cert_chain('yourserver.crt', 'yourserver.key')
-			#context="adhoc"
-
-		self.app.run(host="0.0.0.0", port=args.port, threaded=True, ssl_context=context)
+		self.app.run(host="0.0.0.0", port=args.port, threaded=True)
 
 class SnafuControlRunner:
 	def __init__(self):
