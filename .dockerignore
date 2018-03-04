@@ -1,0 +1,6 @@
+Dockerfile
+.dockerignore
+listFun
+build
+*.zip
+TODO

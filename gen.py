@@ -52,6 +52,7 @@ for idnum, funcname in enumerate(snafu.functions):
     newfunction = {}
     newfunction["id"] = idnum
     newfunction["title"] = funcname
+    newfunction["source"] = source.source
     newfunction["sla"] = (
         "Subject to terms and conditions."
         "No warranty for free service offerings.")

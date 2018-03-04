@@ -8,7 +8,7 @@ _*
 build/
 dist/
 snafu.egg-info/
-
+listFun
 yourserver.crt
 yourserver.key
 

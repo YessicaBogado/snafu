@@ -203,9 +203,15 @@ class Snafu:
 
 		return self.reportexecutionresult(funcname, funcargs, success, res, dtime, otime, sourcename, configpath)
 
-	def execute(self, funcname, **kwargs):
+	def execute(self, funcname, args=None, web=False, re_args=False, **kwargs):
 		asynccall = False
+		print(args)
+		print(web)
+		if (web and args!=None):
+			kwargs=ast.literal_eval(args)
+		print(funcname)
 		funcnameargs = funcname.split(" ")
+		print(kwargs)
 		if len(funcnameargs) > 1:
 			for funcnamearg in funcnameargs:
 				if funcnamearg == "async":
@@ -270,6 +276,8 @@ class Snafu:
 		else:
 			args = inspect.getargspec(func)
 			wantedargs = args[0]
+		if re_args:
+			return str(wantedargs)
 		funcargs = []
 		for wantedarg in wantedargs:
 			if wantedarg in kwargs:
@@ -281,6 +289,7 @@ class Snafu:
 				funcargs.append(ctx)
 			else:
 				if self.interactive:
+					print("entro")
 					if os.isatty(sys.stdin.fileno()):
 						data = input("Data for argument {} needed:".format(wantedarg))
 					else:
@@ -332,7 +341,7 @@ class Snafu:
 		for loggermod in self.loggermods:
 			loggermod.log(sourcename or "", funcname, dtime, success, configpath)
 
-		return res
+		return str(res)
 
 	def connect(self, connectors, configpath):
 		if not self.quiet:
@@ -342,10 +351,11 @@ class Snafu:
 					self.interactive = True
 
 		connectormods = []
+
 		for connector in connectors:
 			mod = importlib.import_module("snafulib.connectors." + connector)
 			connectormods.append(mod)
-
+		print(configpath)
 		for connectormod in connectormods:
 			if "init" in dir(connectormod):
 				connectormod.init(self.execute, None, configpath)
