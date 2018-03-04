@@ -116,10 +116,11 @@ class Connector(BaseXMPPBot):
 
 def initinternal(function, configpath):
 	debug = True
+	print("configpath: ", configpath)
 
 	connectconfig = None
 	if not configpath:
-		configpath = "snafu.ini"
+		configpath = "snafu.ini.dist"
 	if not function:
 		function = "snafu"
 	if os.path.isfile(configpath):
@@ -138,7 +139,7 @@ def initinternal(function, configpath):
 def init(cb, function=None, configpath=None):
 	global gcb
 	gcb = cb
-
+	print("cb: ", cb)
 	#t = threading.Thread(target=initinternal, daemon=True, args=(function, configpath))
 	#t.start()
 	initinternal(function, configpath)
