@@ -41,6 +41,20 @@ def funcHub():
     except Exception as e:
         print(str(e))
 
+@app.route("/functions/funHub/<function>")
+def funcHub_list(function):
+    """Return the listFun for FunctionHub."""
+    try:
+        mypath = os.getcwd()
+        json_data = open(mypath + "/listFun").read()
+        data = json.loads(json_data)
+        z = []
+        for i in data:
+            if i["title"] == function:
+                z.append(i["funcname"])
+        return str(z)
+    except Exception as e:
+        print(str(e))
 
 @app.route("/function-download/<function>.zip")
 def functiondownload(function):
@@ -69,7 +83,7 @@ def functiondownload(function):
         print(str(e))
         return err, 501
     return send_file(pathZip, mimetype="application/zip",
-                     as_attachment=True)
+                     as_attachment=False)
 
 
 def initinternal(function, configpath):

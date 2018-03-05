@@ -30,7 +30,7 @@ allfunctions = []
 for idnum, funcname in enumerate(snafu.functions):
     func, unclear, source = snafu.functions[funcname]
     print(funcname, func, unclear, source.source)
-
+    save_funcname = funcname
     language = source.source.split(".")[-1]
 
     if "." in funcname:
@@ -53,6 +53,7 @@ for idnum, funcname in enumerate(snafu.functions):
     newfunction["id"] = idnum
     newfunction["title"] = funcname
     newfunction["source"] = source.source
+    newfunction["funcname"] = save_funcname
     newfunction["sla"] = (
         "Subject to terms and conditions."
         "No warranty for free service offerings.")
